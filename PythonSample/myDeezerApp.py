@@ -16,8 +16,10 @@ class service(SocketServer.BaseRequestHandler):
         data_loaded = pickle.loads(data)
         print (data_loaded['next'])
         if data_loaded['next'] == 'next':
-            n = MyDeezerApp()
-            n.playback_next()
+            # Тут должен вызывать метод УЖЕ созданного класса (там всё подключено и настроено).
+            # А ты создавал новый и пытался сходу переключить трек.
+            # Поэтому я закостылил это дело через статичную переменную.
+            MyDeezerApp.instance.playback_next()
         else:
             print "None"
     pass
@@ -29,10 +31,7 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 def run():
     print ("server started")
     t = ThreadedTCPServer((HOST,PORT), service)
-    #t.serve_forever() - У тебя здесь вешалось приложение, так как там в бесконечном цикле опрашивались сокеты
-    # Поэтому этот метод надо в отдельный поток и затем ему сделать детач (открепить, т.е. не ждать завершения)
     server_thread = threading.Thread(target=t.serve_forever)
-    # Exit the server thread when the main thread terminates
     server_thread.daemon = True
     server_thread.start()
 # конец
@@ -44,7 +43,7 @@ class MyDeezerApp(object):
     A simple deezer application using NativeSDK
     Initialize a connection and a player, then load and play a song.
     """
-
+    instance = 0
     class AppContext(object):
         """
         Can be used to pass a context to store various info and pass them
@@ -61,6 +60,7 @@ class MyDeezerApp(object):
             self.player_handle = 0
 
     def __init__(self, debug_mode=False):
+        MyDeezerApp.instance = self
         self.debug_mode = debug_mode
         # Identifiers
         self.user_access_token = u"fr49mph7tV4KY3ukISkFHQysRpdCEbzb958dB320pM15OpFsQs"  # SET your user access token
@@ -181,8 +181,8 @@ class MyDeezerApp(object):
         :param content: The content to load
         :type content: str
         """
-        self.log("LOAD => {}".format(self.context.dz_content_url))
         self.context.dz_content_url = content
+        self.log("LOAD => {}".format(self.context.dz_content_url))
         # запуск сервера
         run()
 
