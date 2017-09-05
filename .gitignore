@@ -1,0 +1,11 @@
+*.o
+.*.swp
+NanoPlayer/NanoPlayer
+
+# on MacOS/Xcode
+.DS_Store
+project.xcworkspace
+xcuserdata
+
+*.pyc
+env/
