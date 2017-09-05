@@ -3,6 +3,7 @@
 
 from wrapper.deezer_player import *
 import SocketServer, pickle, socket
+import threading
 
 HOST = "localhost"
 PORT = 1604
@@ -28,7 +29,12 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 def run():
     print ("server started")
     t = ThreadedTCPServer((HOST,PORT), service)
-    t.serve_forever()
+    #t.serve_forever() - У тебя здесь вешалось приложение, так как там в бесконечном цикле опрашивались сокеты
+    # Поэтому этот метод надо в отдельный поток и затем ему сделать детач (открепить, т.е. не ждать завершения)
+    server_thread = threading.Thread(target=t.serve_forever)
+    # Exit the server thread when the main thread terminates
+    server_thread.daemon = True
+    server_thread.start()
 # конец
 # запуск сервера 179 строка
 
