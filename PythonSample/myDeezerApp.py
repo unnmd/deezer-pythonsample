@@ -2,41 +2,44 @@
 # coding: utf8
 
 from wrapper.deezer_player import *
-import SocketServer, pickle, socket
+
+import SocketServer
 import threading
 
-HOST = "localhost"
-PORT = 1604
+from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+import urlparse, json
 
-#Серверная часть
-class service(SocketServer.BaseRequestHandler):
-    def handle(self):
-        data = 'dummy'
-        data = self.request.recv(1024)
-        data_loaded = pickle.loads(data)
-        print (data_loaded['next'])
-        if data_loaded['next'] == 'next':
-            # Тут должен вызывать метод УЖЕ созданного класса (там всё подключено и настроено).
-            # А ты создавал новый и пытался сходу переключить трек.
-            # Поэтому я закостылил это дело через статичную переменную.
+track_info = ''
+
+#HTTPD service start
+class GetHandler(BaseHTTPRequestHandler):
+    def _set_headers(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+
+    def do_GET(self):
+        self._set_headers()
+        if self.path == '/next':
             MyDeezerApp.instance.playback_next()
-        else:
-            print "None"
-    pass
+        elif self.path == '/prev':
+            MyDeezerApp.instance.playback_previous()
+        elif self.path == '/pause':
+            MyDeezerApp.instance.playback_play_pause()
+        elif self.path == '/mute':
+            MyDeezerApp.instance.playback_toggle_mute()
+        elif self.path == '/info':
+            self.wfile.write(track_info)
 
-class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
-    address_family = socket.AF_INET
-    pass
+        return
 
 def run():
-    print ("server started")
-    t = ThreadedTCPServer((HOST,PORT), service)
-    server_thread = threading.Thread(target=t.serve_forever)
+    server = HTTPServer(('localhost', 8080), GetHandler)
+    print 'Starting server at http://localhost:8080'
+    server_thread = threading.Thread(target=server.serve_forever)
     server_thread.daemon = True
     server_thread.start()
-# конец
-# запуск сервера 179 строка
-
+#HTTPD service end
 
 class MyDeezerApp(object):
     """
@@ -183,8 +186,10 @@ class MyDeezerApp(object):
         """
         self.context.dz_content_url = content
         self.log("LOAD => {}".format(self.context.dz_content_url))
-        # запуск сервера
+        # run HTTPD service
         run()
+
+
 
     def shutdown(self):
         """Stop the connection and the player if they have been initialized"""
@@ -200,6 +205,7 @@ class MyDeezerApp(object):
     # We set the callback for player events, to print various logs and listen to events
     @staticmethod
     def player_event_callback(handle, event, userdata):
+        global track_info
         """Listen to events and call the appropriate functions
         :param handle: The player handle.
         :type: p_type
@@ -213,6 +219,7 @@ class MyDeezerApp(object):
         # We retrieve our deezer app
         app = cast(userdata, py_object).value
         event_type = Player.get_event(event)
+        selected_dz_api_info = str()
         if event_type == PlayerEvent.QUEUELIST_TRACK_SELECTED:
             can_pause_unpause = c_bool()
             can_seek = c_bool()
@@ -227,6 +234,7 @@ class MyDeezerApp(object):
                     .format(can_pause_unpause.value, can_seek.value))
             if selected_dz_api_info:
                 print ("\tNOW:\t%s" % selected_dz_api_info)
+                track_info = selected_dz_api_info
             if next_dz_api_info:
                 print ("\tNEXT:\t%s" % next_dz_api_info)
             return 0
@@ -237,7 +245,6 @@ class MyDeezerApp(object):
             idx = c_uint()
             Player.get_queuelist_context(event,streaming_mode,idx)
             app.log(u"index: {}".format(idx.value))
-
             app.player.play()
         if event_type == PlayerEvent.QUEUELIST_TRACK_RIGHTS_AFTER_AUDIOADS:
             # Current tacklist playback is stopped in order to play audioads,
