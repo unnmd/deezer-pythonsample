@@ -8,6 +8,7 @@ PythonSample is a python application which uses Deezer's Native SDK to play a so
 
  - User authentication
  - Playing a Deezer content (track, album or playlist).
+ - http control (pause, next...)
 
 ### Build instructions
 
@@ -35,3 +36,4 @@ To view a list of examples for the parameter:
 ```
 
  [1]: http://developers.deezer.com/sdk/native
+
