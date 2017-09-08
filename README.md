@@ -1,6 +1,6 @@
 ![Deezer](http://cdn-files.deezer.com/img/press/new_logo_white.jpg "Deezer") 
 
-## PythonSample
+## PythonSample - original https://github.com/deezer/native-sdk-samples
 
 PythonSample is a python application which uses Deezer's Native SDK to play a song once a user was authenticated.
 
